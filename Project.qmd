@@ -1,0 +1,230 @@
+---
+title: "Cybersecurity Attack Strategies"
+format: html
+editor: visual
+---
+
+# About
+
+------------------------------------------------------------------------
+
+Nowadays, Cyber attacks are on their peak and it is hard to keep record of all the attacks happening worldwide with the type of strategy used and what organisation is being targeted.
+
+Although it is tough, but somehow managable to record some of the data. The data sets used in this project are recorded on the basis of real time data and captured via tools like wireshark, nmap , burpsuite.
+
+The data sets gives us a brief knowledge of types of attack performed with the frequent targeted service ports with the time taken and time to live for each request with its location , coordinates and whereabouts.
+
+```{r  echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(ggthemes)
+library(dplyr)
+library(flexdashboard)
+library(highcharter)
+library(htmltools)
+library(gt)
+library(viridis)
+library(plotrix)
+
+
+Data1 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/attack.csv")
+Data2 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/2.csv")
+Data3 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/3.csv")
+```
+
+# PROTOCOL WITH HIGHEST TARGETS
+
+--------------------------
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+
+
+combi1 <- inner_join(Data1,Data2, by = "Protocol")
+combi2 <- inner_join(combi1,Data3, by ="Protocol")
+# PROTOCOL WITH HIGHEST TARGETS
+ggplot(combi2, aes(x= Protocol, y = Source , fill = Source))+
+  geom_bar(stat = "identity") +
+  labs(title = "Total number of IP addresses involved in attack",
+       x = "Protocol",
+       y = "Threats") 
+
+```
+
+Turns out, The most targeted protocol here was TCP based on the judgement passed from the bar graph above. Other services like HTTP , and ARP were also faced attacks but TCP touched heights.
+
+# Highest used cyber threat
+
+-----------------------------
+
+```{r echo = FALSE, message = FALSE, warning = FALSE }
+library(plotly)
+
+fig <- plot_ly(data = combi2,
+  type='histogram',
+  x=~Threats)
+
+fig <- fig %>% add_trace(
+  type='histogram',
+  x=~Threats)
+
+fig <- fig %>% layout(
+  barmode="stack",
+  bargap=0.1)
+
+fig
+
+
+```
+
+From above it is clearly visible, DOS(denial-of-service) is the most used cyber threat in this case. Although in the real case scenario, it is observed , DOS or DDOS being the most commonly used attack type to take down an organisations server and attacker’s favorite.
+
+# Graph with two commonly famous protocols(HTTP & TCP) targeted most with attacker's IP address
+
+--------------------------------------
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+library(plotly)
+Data1 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/attack.csv")
+Data2 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/2.csv")
+Data3 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/3.csv")
+
+combi1 <- inner_join(Data1,Data2, by = "Protocol")
+combi2 <- inner_join(combi1,Data3, by ="Protocol")
+accumulate_by <- function(dat, var) {
+  var <- lazyeval::f_eval(var, dat)
+  lvls <- plotly:::getLevels(var)
+  dats <- lapply(seq_along(lvls), function(x) {
+    cbind(dat[var %in% lvls[seq(1, x)], ], frame = lvls[[x]])
+  })
+  dplyr::bind_rows(dats)
+}
+
+df <- combi1 
+fig <- df %>%
+  filter( Protocol %in% c("TCP", "HTTP"))
+fig <- fig %>% accumulate_by(~Length)
+
+
+fig <- fig %>%
+  plot_ly(
+    x = ~Protocol, 
+    y = ~Length,
+    split = ~Source,
+    frame = ~frame, 
+    type = 'scatter',
+    mode = 'lines', 
+    line = list(simplyfy = F)
+  )
+fig <- fig %>% layout(
+  xaxis = list(
+    title = "Protocol",
+    zeroline = F
+  ),
+  yaxis = list(
+    title = "Length",
+    zeroline = F
+  )
+) 
+fig <- fig %>% animation_opts(
+  frame = 100, 
+  transition = 0, 
+  redraw = FALSE
+)
+fig <- fig %>% animation_slider(
+  hide = T
+)
+fig <- fig %>% animation_button(
+  x = 1, xanchor = "right", y = 0, yanchor = "bottom"
+)
+
+fig
+
+```
+
+An interactive graph with the help of "plotly" depicting the popular protocols being targeted most by 185.125.190.39. This can be useful in predicting outcomes and predictions in a cyber attack scenario.
+
+# Graphical representation of total number of IP addresses attacking different protocol services
+
+---------------------------------
+
+```{r echo = FALSE, message = FALSE, warning = FALSE }
+
+combi2 %>%
+  ggplot(combi1=BOD,
+         mapping=aes(x = Protocol,
+                     y = Threats))+
+  geom_point(size = 2 , alpha = 0.5) +
+  geom_line(colour = "red") +
+  geom_smooth()
+
+```
+
+# Dendogram displaying whereabouts of attacks
+
+-------------------------------
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+# Dendogram
+
+combi2 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/3.csv")
+plot(latitude~longitude,combi2)
+with(combi2,text(latitude~longitude, labels = country,pos=2,cex=0.8))
+```
+
+The outcome of the dendogram states that continent of United states and china were the ones attacking the most of our servers from our captured requests that were traced back.
+
+# Pie chart of Total protocol targeted and its ratio
+
+-------------------------
+
+```{r  echo = FALSE, message = FALSE, warning = FALSE}
+x <- as.numeric(Data2$Protocol)
+
+
+
+ggplot(combi2, aes(x = Threats , y = Protocol , fill = Protocol)) +
+  
+  geom_col(mapping=aes()) +
+
+  coord_polar("y", start = 10) +
+  
+  geom_text(aes(label = paste0(round(x*500), "%")),
+            
+            position = position_stack(vjust = 0.5)) +
+  
+  theme (panel.background = element_blank(),
+         
+         axis.line = element_blank(),
+         
+         axis.text = element_blank(),
+         
+         axis.ticks = element_blank(),
+         
+         axis.title = element_blank(),
+         
+         plot.title = element_text(hjust = 0.5, size = 18)) +
+  
+
+scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9" , "pink" , "green"))
+
+
+```
+
+With the use of the pie chart, it is shown TCP being the most attractive combination for attackers when it comes to posting threats
+
+# Line Graph justfying length and time of requests
+
+----------------------------------
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+combi2 %>%
+  ggplot(attack=BOD,
+         mapping=aes(x = Length,
+                     y = Time.to.Live))+
+  geom_point(size = 2 , alpha = 0.5) +
+  geom_line(colour = "red") +
+  geom_smooth()
+```
+
+Through the above graph, the length of a packet that is transmitted and how much time taken by the packet to get expired can be depicted easily.
