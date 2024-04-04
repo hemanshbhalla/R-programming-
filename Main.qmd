@@ -1,0 +1,339 @@
+---
+title: "Cyber attack evaluation & inspection"
+format: html
+editor: visual
+---
+
+# About
+
+Nowadays, Cyber attacks are on their peak and it is hard to keep record of all the attacks happening worldwide with the type of strategy used and what organisation is being targeted.
+
+Although it is tough, but somehow manageable to record some of the data. The data sets used in this project are recorded on the basis of real time data and captured via tools like wireshark, nmap , burpsuite. To go further with the process, various modifications and alterations have been performed while combining the three data sets to help in determining the possibles accurate information.
+
+The data sets gives us a brief knowledge of types of attack performed with the frequent targeted service ports with attack time taken and time to live for each request with its location , coordinates and whereabouts. With the protocols and the types of threats imposed.
+
+```{r  echo = FALSE, message = FALSE, warning = FALSE}
+
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(ggthemes)
+library(dplyr)
+library(flexdashboard)
+library(highcharter)
+library(htmltools)
+library(gt)
+library(viridis)
+library(plotrix)
+
+
+Data1 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/attack.csv")
+Data2 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/2.csv")
+Data3 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/3.csv")
+
+combi1 <- inner_join(Data1,Data2, by = "Protocol")
+combi2 <- inner_join(combi1,Data3, by ="Protocol")
+
+
+
+
+```
+
+The chart represents briefly about the process that is being follow step by step. Created by using the mermaid extension under visual studio code.
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}}
+library(DiagrammeR)
+
+
+nodes <- create_nodes(
+  n = c("ATTACK", "ATTACK2", "ATTACK3", "SystemAA", "System1", "System2", 
+        "System3", "System4", "SystemE", "SystemC", "SystemD"),
+  label = c("Dataset 1", "Dataset 2", "Dataset 3", "Combination of all three datasets",
+            "Data clening process with elimination of N.A variables",
+            "Elimination of extra columns that are not required for the process",
+            "Construction of qualitative and quantitaive data with bar graphs, pie charts, dendograms",
+            "Result outcome", "Most Frequent targetted Protocol", "Most frequent used Threat",
+            "Most targeted protocol with all the threats"),
+  type = "process"
+)
+
+
+edges <- create_edges(
+  from = c("ATTACK", "ATTACK2", "ATTACK3", "SystemAA", "SystemAA", "SystemAA", "SystemAA", 
+           "System1", "System2", "System3", "System4", "System4", "System4"),
+  to = c("SystemAA", "SystemAA", "SystemAA", "System1", "System2", "System3", "System4",
+          "System4", "System4", "System4", "SystemD", "SystemE", "SystemC"),
+  rel = c("Data1", "Data2", "Data3", "1", "3", "2", "4", "6", "5", "7", "8", "9")
+)
+
+
+graph <- create_graph(nodes_df = nodes, edges_df = edges)
+
+
+render_graph(graph)
+```
+
+# Cleaning of data
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+
+cleaned_data <- na.omit(combi2)
+summary(cleaned_data)
+
+
+
+
+```
+
+The summary denotes the number of N.A values that were removed from the data to prevent mismatched outputs and redundancy of the data
+
+# **Regression model GLM(Generalized linear model)**
+
+```{r  echo = FALSE, message = FALSE, warning = FALSE}
+
+
+
+
+sapply(combi2 , function(a) sum(is.na(a)))
+library(glmnet)
+X <- cleaned_data$Source_Known
+Y <- cleaned_data$Destination_Known
+model <-glm( Y ~ X , family= gaussian, data=cleaned_data) 
+summary(model)
+confint(model)
+```
+
+According to the output of the model, the result outcome of the model summary indicates that both the predictor variable "X" have a highly significant effect on the response variable "Y". The estimated coefficients suggest that for each unit increase in "X", the predicted value of "Y" decreases by approximately the number 1.
+
+# Text Mining
+
+```{r  echo=FALSE , warning=FALSE , message=FALSE}
+library(tm) 
+library(dplyr) 
+library(tidyverse)
+
+
+
+cleaned_data <- cleaned_data %>%
+  mutate(Protocol = tolower(Protocol)) %>%
+  mutate(Protocol = gsub("[[:punct:]]", "", Protocol)) # Remove punctuation (modify as needed)
+corpus <- Corpus(VectorSource(cleaned_data$Protocol))
+dtm <- DocumentTermMatrix(corpus)
+dtm_df <- as.data.frame(as.matrix(dtm))
+dtm_df$Protocol <- cleaned_data$Protocol
+tidy_dtm <- dtm_df %>%
+  gather(key = "word", value = "count", -Protocol)
+word_freq <- tidy_dtm %>%
+  group_by(word) %>%
+  summarise(freq = sum(count)) %>%
+  arrange(desc(freq))
+head(word_freq, 10)
+```
+
+Here we performed text mining on the column Protocol that is the key column in the three data sets. Outcome of the text mining shows the following information about the conversion of text into the numbers.
+
+# PROTOCOL WITH HIGHEST TARGETS
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+
+
+
+# PROTOCOL WITH HIGHEST TARGETS
+ggplot(cleaned_data, aes(x= Protocol, y = Source , fill = Source))+
+  geom_bar(stat = "identity") +
+  labs(title = "Total number of IP addresses involved in attack",
+       x = "Protocol",
+       y = "Threats") 
+
+
+```
+
+Turns out, The most targeted protocol here was TCP based on the judgement passed from the bar graph above. Other services like HTTP , and ARP were also faced attacks but TCP touched heights.
+
+# Highest used cyber threat
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+
+library(plotly)
+
+fig <- plot_ly(data = cleaned_data,
+  type='histogram',
+  x=~Threats)
+
+fig <- fig %>% add_trace(
+  type='histogram',
+  x=~Threats)
+
+fig <- fig %>% layout(
+  barmode="stack",
+  bargap=0.1)
+
+fig
+
+```
+
+From above it is clearly visible, DOS(denial-of-service) is the most used cyber threat in this case. Although in the real case scenario, it is observed , DOS or DDOS being the most commonly used attack type to take down an organisations server and attacker’s favorite.
+
+# **Graph with two commonly famous protocols(HTTP & TCP) targeted most with attacker's IP address**
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+library(plotly)
+Data1 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/attack.csv")
+Data2 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/2.csv")
+Data3 <- read.csv(file = "/Users/hemanshbhalla/Desktop/Datasets/3.csv")
+
+combi1 <- inner_join(Data1,Data2, by = "Protocol")
+combi2 <- inner_join(combi1,Data3, by ="Protocol")
+accumulate_by <- function(dat, var) {
+  var <- lazyeval::f_eval(var, dat)
+  lvls <- plotly:::getLevels(var)
+  dats <- lapply(seq_along(lvls), function(x) {
+    cbind(dat[var %in% lvls[seq(1, x)], ], frame = lvls[[x]])
+  })
+  dplyr::bind_rows(dats)
+}
+
+df <- cleaned_data 
+fig <- df %>%
+  filter( Protocol %in% c("TCP", "HTTP"))
+fig <- fig %>% accumulate_by(~Length)
+
+
+fig <- fig %>%
+  plot_ly(
+    x = ~Protocol, 
+    y = ~Length,
+    split = ~Source,
+    frame = ~frame, 
+    type = 'scatter',
+    mode = 'lines', 
+    line = list(simplyfy = F)
+  )
+fig <- fig %>% layout(
+  xaxis = list(
+    title = "Protocol",
+    zeroline = F
+  ),
+  yaxis = list(
+    title = "Length",
+    zeroline = F
+  )
+) 
+fig <- fig %>% animation_opts(
+  frame = 100, 
+  transition = 0, 
+  redraw = FALSE
+)
+fig <- fig %>% animation_slider(
+  hide = T
+)
+fig <- fig %>% animation_button(
+  x = 1, xanchor = "right", y = 0, yanchor = "bottom"
+)
+
+fig
+
+```
+
+An interactive graph with the help of "plotly" depicting the popular protocols being targeted most by 185.125.190.39. This can be useful in predicting outcomes and predictions in a cyber attack scenario.
+
+# Graphical representation of total number of IP addresses attacking different protocol services
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+
+cleaned_data %>%
+  ggplot(cleaned_data=BOD,
+         mapping=aes(x = Protocol,
+                     y = Threats))+
+  geom_point(size = 2 , alpha = 0.5) +
+  geom_line(colour = "red") +
+  geom_smooth()
+```
+
+This represents that DNS was the most targeted protocol by almost every Threat. This means DNS is probably the protocol which attackers find most easy and informative with juicy data to extract information.
+
+# Dendo-gram displaying whereabouts of attacks
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+
+
+plot(latitude~longitude,cleaned_data)
+with(combi1,text(latitude~longitude, labels = country,pos=2,cex=0.8))
+```
+
+The outcome of the dendogram states that continent of United states and china were the ones attacking the most of our servers from our captured requests that were traced back.
+
+# Pie-chart of Total protocol targeted and its ratio
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+x <- as.numeric(Data2$Protocol)
+
+library(ggplot2)
+
+ggplot(Data2, aes(x = Threats , y = Protocol , fill = Protocol)) +
+  
+  geom_col(mapping=aes()) +
+  
+  coord_polar("y", start = 10) +
+  
+  geom_text(aes(label = paste0(round(x*500), "%")),
+            
+            position = position_stack(vjust = 0.5)) +
+  
+  theme (panel.background = element_blank(),
+         
+         axis.line = element_blank(),
+         
+         axis.text = element_blank(),
+         
+         axis.ticks = element_blank(),
+         
+         axis.title = element_blank(),
+         
+         plot.title = element_text(hjust = 0.5, size = 18)) +
+  
+  
+  scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9" , "pink" , "green"))
+
+
+```
+
+With the use of the pie chart, it is shown TCP being the most attractive combination for attackers when it comes to posting threats
+
+# Line Graph justifying length and time of requests
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+library(ggplot2)
+Data1 %>%
+  ggplot(attack=BOD,
+         mapping=aes(x = Length,
+                     y = Time.to.Live))+
+  geom_point(size = 2 , alpha = 0.5) +
+  geom_line(colour = "red") +
+  geom_smooth()
+```
+
+Through the above graph, the length of a packet that is transmitted and how much time taken by the packet to get expired can be depicted easily.
+
+# Pie chart depicting the Postal codes
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+library(plotly)
+
+str(cleaned_data)
+
+
+unique_threats <- unique(Data2$Threats)
+print(unique_threats)
+
+fig <- plot_ly(cleaned_data, labels = ~postalcode, values = ~postalcode, type = 'pie')
+fig <- fig %>% layout(title = 'Postal code ratio',
+                      xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                      yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+```
+
+This pie chart depicts that by tracing back the IP addresses , it is visible the major to minor attacks from different areas of the continents by their postal codes. The most attacks were initiated by 60654 that is from UNITED STATES.
+
+##### Therefore, confirming the most popular continent is america when it comes to attacking the servers we have captured
