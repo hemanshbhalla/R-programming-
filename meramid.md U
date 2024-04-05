@@ -1,0 +1,30 @@
+```mermaid
+C4Context
+title System Context diagram for Cyber attacks capturing
+Person(ATTACK, "Dataset 1 ", "Containing source and destination with IP addresses of an attack framework ")
+Person(ATTACK2, "Dataset 2 ", " Giving the type of threats and ports targetted")
+Person(ATTACK3, "Dataset 3 ", " Providing the longitude , latitude with country information")
+System(SystemAA, "Combination of all three datasets", "Providing information of different sources , destinations with Ports ,  threats additionally with whereabouts and all combined with Protocol")
+Enterprise_Boundary(b1, "Attack Framework") {
+System(System1, "Data clening process with elimination of N.A variables")
+   System(System2, "Elimination of extra columns that are not required for the process")
+  System(System3, "construction of qualitative and quantitaive data with bar graphs , pie charts , dendograms , ")
+  System(System4, "Result outcome ")
+
+  SystemDb_Ext(SystemE, " Most Frequent targetted Protocol", " TCP") 
+  System_Ext(SystemC, "Most frequent used Threat", "DoS")
+  System_Ext(SystemD,"Most targeted protocol with all the threats  "DNS",)  
+}
+BiRel(ATTACK, SystemAA, "Data1")
+BiRel(ATTACK2, SystemAA, "Data2")
+BiRel(ATTACK3, SystemAA, "Data3")
+BiRel(SystemAA, System2, "3")
+BiRel(SystemAA, System1, "1")
+BiRel(SystemAA, System3, "  .....2")
+BiRel(System1, System4, "4")
+BiRel(System2, System4, "6")
+BiRel(System3, System4, "5")
+BiRel(System4, SystemD, "7")
+BiRel(System4, SystemE, "8")
+BiRel(System4, SystemC, "9")
+```
